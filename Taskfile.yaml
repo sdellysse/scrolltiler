@@ -1,0 +1,100 @@
+version: "3"
+
+method: "timestamp"
+run: "when_changed"
+silent: true
+
+tasks:
+  default:
+    cmds:
+      - task --list
+
+  ./@types/Gjs:
+    desc: make @types/Gjs
+    sources:
+      - ts-for-gir.config.js
+    generates:
+      - "@types/Gjs"
+    deps:
+      - ./node_modules
+    cmds:
+      - rm -rf @types/Gjs
+      - ts-for-gir generate --configName=ts-for-gir.config.js
+
+  ./dist:
+    desc: make ./dist
+    deps:
+      - ./dist/extension.js
+      - ./dist/metadata.json
+
+  ./dist/extension.js:
+    desc: make dist/extension.js
+    sources:
+      - src/**/*
+    generates:
+      - dist/extension.js
+    deps:
+      - ./node_modules
+      - ./@types/Gjs
+    cmds:
+      - mkdir -p dist
+      - esbuild src/exports/extension.ts --bundle --outfile=dist/extension.js --tree-shaking=false --target=firefox78 --platform=neutral --format=esm --external:"gi://*"
+
+  ./dist/metadata.json:
+    desc: make dist/metadata.json
+    sources:
+      - src/metadata.json
+    generates:
+      - dist/metadata.json
+    cmds:
+      - mkdir -p dist
+      - cp src/exports/metadata.json dist/metadata.json
+  
+  ./node_modules:
+    desc: make node_modules
+    sources:
+      - package.json
+      - pnpm-lock.yaml
+    generates:
+      - node_modules
+    cmds:
+      - pnpm install
+
+  clean:
+    desc: remove all generated files
+    cmds:
+      - rm -rf ./.task
+      - rm -rf ./node_modules
+      - rm -rf ./dist
+      - rm -rf ./@types/Gjs
+
+  format:
+    desc: format all source files
+    deps:
+      - ./node_modules
+    cmds:
+      - prettier --write .
+
+  link:
+    desc: link to gnome extensions directory
+    deps:
+      - ./dist
+    cmds:
+      - rm -fv /home/notroot/.local/share/gnome-shell/extensions/scrolltiler@bytedogconsulting.com
+      - ln -sfv $PWD/dist $HOME/.local/share/gnome-shell/extensions/scrolltiler@bytedogconsulting.com
+
+  lint:
+    desc: lint
+    deps:
+      - ./node_modules
+    cmds:
+      - task: typecheck
+      - prettier --check .
+
+  typecheck:
+    desc: typecheck
+    deps:
+      - ./node_modules
+      - ./@types/Gjs
+    cmds:
+      - tsc src/extension.ts

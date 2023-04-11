@@ -1,0 +1,8 @@
+{
+  "name": "Scroll Tiler",
+  "description": "Scrolling Tiling Window Manager for GNOME",
+  "uuid": "scrolltiler@bytedogconsulting.com",
+  "shell-version": [
+    "43"
+  ]
+}
